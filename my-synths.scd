@@ -257,19 +257,20 @@ SynthDef(\superbass, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq
 
 
 (
-SynthDef(\supermoog2, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
-	gate=1, attackTime= 0.2, fenvamount=1.0, cutoff= 10000, voice=2.0|
+SynthDef(\supermoog, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
+	gate=1, attackTime= 0.2, fenvamount=1.0, cutoff= 2000, voice=2.0|
 	var sound;
 	//var env = EnvGen.ar(Env.adsr(0.001,0.3,0.9,0.2),gate,doneAction:2, timeScale:sustain);
 	var env = EnvGen.ar(Env.pairs([[0,0],[0.07,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -1), timeScale:sustain, doneAction:2);
 	var osc, filter, filterenv;
 	freq = freq / 4.0;
-	freq = [freq, freq * 1.001];
+	freq = [freq, freq * 1.002];
 	osc = Mix(Pulse.ar(freq.lag(0.05)*[1.0,1.001,2.0],Rand(0.45,0.5)!3,0.33));
 	filterenv = EnvGen.ar(Env.adsr(attackTime,0.0,1.0,0.2),gate,doneAction:2);
 	filter =  MoogFF.ar(osc,cutoff*(1.0+(fenvamount*filterenv)), 2.0);
 	//sound = 0.5*filter+(0.5*filter.distort);
-	sound = (filter * voice).distort;
+	//sound = (filter * voice).distort;
+    sound = (filter * voice);
 	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add
 );
