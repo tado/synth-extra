@@ -308,12 +308,12 @@ SynthDef(\superrhodes, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, fr
 (
 SynthDef(\superfbk, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq, gate = 1,
     ratio = 1.5, detune = 1.001, gain = 1.0, distort = 0.5, flow = 400, fhigh = 18000|
-	var env = EnvGen.ar(Env.asr(0.5, 1.0, 0.5), timeScale:sustain, doneAction:2);
+	var env = EnvGen.ar(Env.perc(0.5, 0.5), timeScale:sustain, doneAction:2);
     var osc1 = Saw.ar([freq/4.0, freq/4.0*detune]);
     var osc2 = Saw.ar([freq/4.0*ratio*detune, freq/4.0*ratio]);
     var mix = osc1 + osc2;
     var in = mix;
-    var fbNode = FbNode(2, 0.25, 2);
+    var fbNode = FbNode(2, 0.5, 2);
     var signal = fbNode.delay;
     signal = RLPF.ar(signal * 0.5 + in, LFNoise1.kr(0.3).exprange(flow, fhigh), 0.7);
     //signal = signal * distort + in;
