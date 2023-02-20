@@ -305,3 +305,23 @@ SynthDef(\superrhodes, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, fr
 }).add
 );
 
+(
+SynthDef(\superfbk, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq, gate = 1,
+    ratio = 1.5, detune = 1.001, gain = 1.0, distort = 0.5, flow = 400, fhigh = 18000|
+	var env = EnvGen.ar(Env.asr(0.5, 1.0, 0.5, curve:2.0), timeScale:sustain, doneAction:2);
+    var osc1 = Saw.ar([freq/4.0, freq/4.0*detune]);
+    var osc2 = Saw.ar([freq/4.0*ratio*detune, freq/4.0*ratio]);
+    var mix = osc1 + osc2;
+    var in = mix;
+    var fbNode = FbNode(2, 0.25, 2);
+    var signal = fbNode.delay;
+    signal = RLPF.ar(signal * 0.5 + in, LFNoise1.kr(0.3).exprange(flow, fhigh), 0.7);
+    //signal = signal * distort + in;
+    signal = signal * EnvGen.ar(Env.asr(0.0, 1.0, 0.5, curve:4.0), doneAction:2);
+    signal = AnalogVintageDistortion.ar(signal, distort, 0, 0.2, 0.2);
+    fbNode.write(signal);
+    signal = GVerb.ar(signal, 60, 10);
+    OffsetOut.ar(out, DirtPan.ar(signal, ~dirt.numChannels, pan, env));
+}).add
+);
+
