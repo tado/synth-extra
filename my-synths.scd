@@ -320,7 +320,8 @@ SynthDef(\superfbk, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
     //signal = signal * EnvGen.ar(Env.asr(0.0, 1.0, 0.5, curve:4.0), doneAction:2);
     signal = AnalogVintageDistortion.ar(signal, distort, 0, 0.2, 0.2);
     fbNode.write(signal);
-    signal = GVerb.ar(signal, 60, 10);
+    //signal = GVerb.ar(signal, 60, 10);
+    signal = (CombN.ar(signal, 0.4, [0.4,0.35],2) * 0.4) + (signal * 0.5);
     OffsetOut.ar(out, DirtPan.ar(signal, ~dirt.numChannels, pan, env));
 }).add
 );
