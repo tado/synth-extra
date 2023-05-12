@@ -325,3 +325,19 @@ SynthDef(\superfbk, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
     OffsetOut.ar(out, DirtPan.ar(signal, ~dirt.numChannels, pan, env));
 }).add
 );
+
+(
+SynthDef("superperc", {
+    arg out = 0, sustain=1, gate = 1, amp = 1, freq, pitch1 = 0.666667, voice = 1000, clipAmount = 0.01, pan, decay=2.0;
+    var carFreq = freq * 2.0;
+    var modFreq = freq * pitch1;
+    var modEnv = EnvGen.ar(Env.adsr(0.001, 0.2, 0.5, 0.0, peakLevel: voice), timeScale:sustain);
+    var mod = SinOsc.ar([modFreq, modFreq * 1.01]) * modEnv;
+    var car = SinOsc.ar(carFreq + mod);
+    var env = EnvGen.ar(Env.perc(releaseTime: decay, level: amp), timeScale:sustain, doneAction: 2);
+    //var env = EnvGen.ar(Env.perc(), -3), timeScale:sustain, doneAction:2);
+    var clip = clipAmount * 500;
+    OffsetOut.ar(out, DirtPan.ar(car, ~dirt.numChannels, pan, env));
+    //Out.ar(out, (car * ampEnv * clip).clip(-0.7, 0.7) * 0.1);
+}).add;
+);
