@@ -341,3 +341,37 @@ SynthDef("superperc", {
     //Out.ar(out, (car * ampEnv * clip).clip(-0.7, 0.7) * 0.1);
 }).add;
 );
+
+(
+SynthDef("superdown", {
+    arg out = 0, sustain=1, gate = 1, amp = 1, freq, pitch1 = 0.3333333, voice = 800, clipAmount = 0.01, pan, decay=0;
+    var carFreq = freq;
+    var modFreq = freq * pitch1;
+    var modEnv = EnvGen.ar(Env.adsr(0.001, 0.2, 0.5, 0.0, peakLevel: voice), timeScale:sustain);
+    var pitchenv = EnvGen.kr(Env.new(levels: [1, 0], times: [2], curve: [-3]), timeScale:sustain, doneAction:2);
+    var mod = SinOsc.ar([modFreq, modFreq * 1.01]) * modEnv;
+    var car = SinOsc.ar((carFreq + mod) * pitchenv);
+    //var env = EnvGen.ar(Env.adsr(0.1, 0.3, 0.7, 0.2, peakLevel: amp), timeScale:sustain, doneAction: 2);
+    var env = EnvGen.ar(Env.pairs([[0,0],[0.1,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+    var clip = clipAmount * 500;
+    OffsetOut.ar(out, DirtPan.ar(car, ~dirt.numChannels, pan, env));
+    //Out.ar(out, (car * ampEnv * clip).clip(-0.7, 0.7) * 0.1);
+}).add;
+);
+
+(
+SynthDef("superup", {
+    arg out = 0, sustain=1, gate = 1, amp = 1, freq, pitch1 = 0.3333333, voice = 800, clipAmount = 0.01, pan, decay=0;
+    var carFreq = freq;
+    var modFreq = freq * pitch1;
+    var modEnv = EnvGen.ar(Env.adsr(0.001, 0.2, 0.5, 0.0, peakLevel: voice), timeScale:sustain);
+    var pitchenv = EnvGen.kr(Env.new(levels: [0.0, 1], times: [2], curve: [-5]), timeScale:sustain, doneAction:2);
+    var mod = SinOsc.ar([modFreq, modFreq * 1.01]) * modEnv;
+    var car = SinOsc.ar((carFreq + mod) * pitchenv);
+    //var env = EnvGen.ar(Env.adsr(0.1, 0.3, 0.7, 0.2, peakLevel: amp), timeScale:sustain, doneAction: 2);
+    var env = EnvGen.ar(Env.pairs([[0,0],[0.1,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+    var clip = clipAmount * 500;
+    OffsetOut.ar(out, DirtPan.ar(car, ~dirt.numChannels, pan, env));
+    //Out.ar(out, (car * ampEnv * clip).clip(-0.7, 0.7) * 0.1);
+}).add;
+);
