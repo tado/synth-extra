@@ -306,25 +306,54 @@ SynthDef(\superrhodes, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, fr
 );
 
 (
-SynthDef(\superfbk, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq, gate = 1,
-    ratio = 1.5, detune = 1.001, gain = 1.0, distort = 0.5, flow = 400, fhigh = 18000|
-    var env = EnvGen.ar(Env.perc(0.5, 0.5), timeScale:sustain, doneAction:2);
-    var osc1 = Saw.ar([freq/4.0, freq/4.0*detune]);
-    var osc2 = Saw.ar([freq/4.0*ratio*detune, freq/4.0*ratio]);
+SynthDef("superfbk", {|out, speed=1, decay=0, sustain=1, pan, accelerate, freq, gate = 1,
+    ratio = 1.5, detune = 1.01, rq = 0.5, gain = 1.0, distort = 0.5, wet = 0.5, flow = 400, fhigh = 20000|
+    // var env = EnvGen.ar(Env.perc(0.5, 0.5), timeScale:sustain, doneAction:2);
+    var env = EnvGen.ar(Env.pairs([[0,0],[0.5,1],[0.9,1-decay],[0.95,1-decay],[1,0]], -5), timeScale:sustain, doneAction:2);
+    //var osc1 = Saw.ar([freq/4.0, freq/4.0*detune]);
+    //var osc2 = Saw.ar([freq/4.0*ratio*detune, freq/4.0*ratio]);
+    var osc1 = Saw.ar([freq, freq*detune]);
+    var osc2 = Saw.ar([freq*ratio*detune, freq*ratio]);
     var mix = osc1 + osc2;
     var in = mix;
     var fbNode = FbNode(2, 0.5, 2);
     var signal = fbNode.delay;
-    signal = RLPF.ar(signal * 0.5 + in, LFNoise1.kr(0.3).exprange(flow, fhigh), 0.7);
-    //signal = signal * distort + in;
-    //signal = signal * EnvGen.ar(Env.asr(0.0, 1.0, 0.5, curve:4.0), doneAction:2);
-    signal = AnalogVintageDistortion.ar(signal, distort, 0, 0.2, 0.2);
+    signal = RLPF.ar(signal * 0.5 + in, LFNoise1.kr(0.6).exprange(flow, fhigh), rq);
+    signal = AnalogVintageDistortion.ar(signal, distort) * wet + (signal * (1.0 - wet));
     fbNode.write(signal);
     //signal = GVerb.ar(signal, 60, 10);
-    signal = (CombN.ar(signal, 0.4, [0.4,0.35],2) * 0.4) + (signal * 0.5);
+    signal = (CombN.ar(signal, 0.4, [0.4,0.35],2) * 0.3) + (signal * 0.7);
+    //signal = CombN.ar(signal, 0.4, [0.4,0.35],2);
     OffsetOut.ar(out, DirtPan.ar(signal, ~dirt.numChannels, pan, env));
 }).add
 );
+
+(
+SynthDef(\supersawfbk, {|out, rate=1, decay=0, sustain=1, pan, accelerate, freq,
+    voice=0.5, semitone=12, resonance=0.2, lfo=1, pitch1=1, speed=1,
+    distort = 0.5, rq = 0.5, flow = 200, fhigh = 20000|
+    var env = EnvGen.ar(Env.pairs([[0,0],[0.05,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+    var basefreq = freq * DirtFreqScale.kr(speed, accelerate, sustain);
+    var basefreq2 = basefreq * (2**(semitone/12));
+    var lfof1 = min(basefreq*10*pitch1, 22000);
+    var lfof2 = min(lfof1 * (lfo + 1), 22000);
+    var sound = MoogFF.ar(
+        (0.5 * Mix.arFill(3, {|i|  SawDPW.ar(basefreq * ((i-1)*voice/50+1), 0)})) + (0.5 * LFTri.ar(basefreq2, voice)),
+        LFTri.ar(basefreq/64*rate, 0.5).range(lfof1,lfof2),
+        resonance*4).tanh*2;
+    // sound = sound.tanh*2;
+    var in = sound;
+    var fbNode = FbNode(2, 0.5, 2);
+    var signal = fbNode.delay;
+    signal = RLPF.ar(signal * 0.5 + in, LFNoise1.kr(0.3).exprange(flow, fhigh), rq);
+    signal = AnalogVintageDistortion.ar(signal, distort);
+    fbNode.write(signal);
+    //signal = GVerb.ar(signal, 60, 10);
+    signal = (CombN.ar(signal, 0.4, [0.4,0.35],2) * 0.4) + (signal * 0.5);
+    Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add
+);
+
 
 (
 SynthDef("superperc", {
@@ -374,4 +403,55 @@ SynthDef("superup", {
     OffsetOut.ar(out, DirtPan.ar(car, ~dirt.numChannels, pan, env));
     //Out.ar(out, (car * ampEnv * clip).clip(-0.7, 0.7) * 0.1);
 }).add;
+);
+
+(
+SynthDef("superfmfbk", {
+    arg out = 0, sustain=1, gate = 1, amp = 1, freq, pitch1 = 0.3333333, voice = 800, clipAmount = 0.01, pan, decay=0,
+    rq = 0.5, gain = 1.0, distort = 0.5, wet = 1.0, flow = 200, fhigh = 20000;
+    var carFreq = freq;
+    var modFreq = freq * pitch1;
+    var modEnv = EnvGen.ar(Env.adsr(0.001, 0.2, 0.5, 0.0, peakLevel: voice), timeScale:sustain);
+    // var pitchenv = EnvGen.kr(Env.new(levels: [1, 0], times: [2], curve: [-5]), timeScale:sustain, doneAction:2);
+    var mod = SinOsc.ar([modFreq, modFreq * 1.01]) * modEnv;
+    var car = SinOsc.ar((carFreq + mod));
+    //var env = EnvGen.ar(Env.adsr(0.1, 0.3, 0.7, 0.2, peakLevel: amp), timeScale:sustain, doneAction: 2);
+    var env = EnvGen.ar(Env.pairs([[0,0],[0.1,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+    var clip = clipAmount * 500;
+    var in = car;
+    var fbNode = FbNode(2, 0.5, 2);
+    var signal = fbNode.delay;
+    signal = RLPF.ar(signal * 0.5 + in, LFNoise1.kr(0.2).exprange(flow, fhigh), rq);
+    signal = AnalogVintageDistortion.ar(signal, distort);
+    //signal = CombN.ar(signal, 0.4, [0.4,0.35],2);
+    fbNode.write(signal * wet);
+    //signal = GVerb.ar(signal, 60, 10);
+    //signal = (CombN.ar(signal, 0.4, [0.4,0.35],2) * 0.3) + (signal * 0.7);
+    OffsetOut.ar(out, DirtPan.ar(signal, ~dirt.numChannels, pan, env));
+    //Out.ar(out, (car * ampEnv * clip).clip(-0.7, 0.7) * 0.1);
+}).add;
+);
+
+(
+SynthDef(\supersawfbk, {|out, rate=1, decay=0, sustain=1, pan, accelerate, freq,
+    voice=0.5, semitone=12, resonance=0.2, lfo=1, pitch1=1, speed=1,
+    flow = 200, fhigh = 20000, rq = 0.5, distort = 0.5, wet = 0.5|
+    var env = EnvGen.ar(Env.pairs([[0,0],[0.05,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+    var basefreq = freq * DirtFreqScale.kr(speed, accelerate, sustain);
+    var basefreq2 = basefreq * (2**(semitone/12));
+    var lfof1 = min(basefreq*10*pitch1, 22000);
+    var lfof2 = min(lfof1 * (lfo + 1), 22000);
+    var in = MoogFF.ar(
+        (0.5 * Mix.arFill(3, {|i|  SawDPW.ar(basefreq * ((i-1)*voice/50+1), 0)})) + (0.5 * LFTri.ar(basefreq2, voice)),
+        LFTri.ar(basefreq/64*rate, 0.5).range(lfof1,lfof2),
+        resonance*4).tanh*2;
+    var fbNode = FbNode(2, 1.0);
+    var signal = Mix.fill(10, {fbNode.delay(1.0.rand)});
+    signal = RLPF.ar(signal * 0.5 + in, LFNoise1.kr(0.2).exprange(flow, fhigh), rq);
+    signal = AnalogVintageDistortion.ar(signal, distort);
+    fbNode.write((in * (1.0 - wet)) + (signal * wet));
+    //fbNode.write(in + (signal*0.12));
+    //fbNode.write(in.dup);
+    Out.ar(out, DirtPan.ar(signal, ~dirt.numChannels, pan, env));
+}).add
 );
