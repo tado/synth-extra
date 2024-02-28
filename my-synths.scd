@@ -457,13 +457,13 @@ SynthDef("supersawfbk", {|out, rate=1, decay=0, sustain=1, pan, accelerate, freq
 );
 
 (
-SynthDef("superhammond", {|out, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
+SynthDef("superfadehammond", {|out, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
 	voice=0, perc=0, percf=2, accelerate=0, speed=1|
 	var freqs, amps, sound, click, env, ampscale, attrel;
 	attrel = (sustain/2).clip(0,0.005);
 	freq = freq * DirtFreqScale.kr(speed, accelerate, sustain);
 	//env = EnvGen.ar(Env.linen(attrel, sustain-(2*attrel), attrel), doneAction:2);
-    env = EnvGen.ar(Env.pairs([[0,0],[0.1,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+    env = EnvGen.ar(Env.pairs([[0,0],[0.5,1],[1,0]], -5), timeScale:sustain, doneAction:2);
 	freqs = [0.5, 1.4988, 1, 2, 2.9976, 4, 5.0409, 5.9953, 8] * freq;
 	freqs = 2**(freqs < 63) * freqs; // fold up bottom register
 	freqs = freqs / (2**(freqs > 6000)); // fold down high harmonics
