@@ -4,17 +4,30 @@ SynthDef(\sync, {|out, sustain=1, pan, freq |
 }).add
 );
 
+/*
 (
 SynthDef(\supersin, {|out, speed=1, decay=0, sustain=1, pan, accelerate, freq,
     voice=0.5, semitone=12, resonance=0.2, lfo=1, pitch1=1|
-    var env = EnvGen.ar(Env.pairs([[0,0],[0.05,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+    //var env = EnvGen.ar(Env.pairs([[0,0],[0.01,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+	var env = EnvGen.ar(Env.perc(0.0, 1.0, 0.9, -48.0));
     var basefreq = freq* Line.kr(1, 1+accelerate, sustain);
-    var basefreq2 = basefreq / (2**(semitone/12));
-    var lfof1 = min(basefreq*10*pitch1, 22000);
-    var lfof2 = min(lfof1 * (lfo + 1), 22000);
+    //var basefreq2 = basefreq / (2**(semitone/12));
+    //var lfof1 = min(basefreq*10*pitch1, 22000);
+    //var lfof2 = min(lfof1 * (lfo + 1), 22000);
     var sound = SinOsc.ar(basefreq);
     OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add
+);
+*/
+(
+SynthDef("supersin",
+	{
+		arg out, decay=0.0, sustain=1.0, pan, accelerate, freq, lfo=1, detune=0.005;
+		var env = EnvGen.ar(Env.pairs([[0,0],[0.0,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+		var sound = SinOsc.ar([freq, freq*(1 + detune)]);
+		Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+	}
+).add
 );
 
 (
@@ -246,7 +259,7 @@ SynthDef(\superbass, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq
     var sound;
     var env = EnvGen.ar(Env.adsr(0.01,0.0,0.9,0.05),gate,doneAction:2, timeScale:sustain);
     var osc, filter, filterenv;
-    freq = freq / 4.0;
+    // freq = freq / 4.0;
     osc = Saw.ar(freq);
     filterenv = EnvGen.ar(Env.adsr(0.0,0.5,0.2,0.2),gate,doneAction:2);
     filter =  RLPF.ar(osc,cutoff*filterenv+100,rq);
@@ -263,7 +276,7 @@ SynthDef(\supermoog, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq
     //var env = EnvGen.ar(Env.adsr(0.001,0.3,0.9,0.2),gate,doneAction:2, timeScale:sustain);
     var env = EnvGen.ar(Env.pairs([[0,0],[0.07,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -1), timeScale:sustain, doneAction:2);
     var osc, filter, filterenv;
-    freq = freq / 4.0;
+    // freq = freq / 4.0;
     freq = [freq, freq * 1.002];
     osc = Mix(Pulse.ar(freq.lag(0.05)*[1.0,1.001,2.0],Rand(0.45,0.5)!3,0.33));
     filterenv = EnvGen.ar(Env.adsr(attackTime,0.0,1.0,0.2),gate,doneAction:2);
