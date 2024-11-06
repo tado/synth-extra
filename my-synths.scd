@@ -502,3 +502,19 @@ SynthDef("superfadehammond", {|out, sustain=1, decay=0, pan, freq, vibrato=0.5, 
 	Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add
 );
+
+(
+SynthDef("super303", {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
+    gate=1, cutoff= 500, rq = 0.2, voice = 100|
+    var sound;
+    var env = EnvGen.ar(Env.adsr(0.01, 0.0, 1.0, 0.05), gate, doneAction:2, timeScale:sustain);
+    var osc, filter, filterenv;
+    // freq = freq / 4.0;
+	osc = Saw.ar([freq / 1.002, freq * 1.002]);
+    filterenv = EnvGen.ar(Env.adsr(0.01, 1.0, 0.2, 0.2), gate, doneAction:2);
+    // filter =  RLPFD.ar(osc, cutoff * filterenv + 2500, rq, voice, 1.0);
+	filter =  RLPFD.ar(osc, cutoff * filterenv + 2000, rq, voice, 1.0);
+    sound = Mix(filter);
+    OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add
+);
