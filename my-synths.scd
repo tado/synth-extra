@@ -518,3 +518,38 @@ SynthDef("super303", {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq
     OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add
 );
+
+(
+SynthDef("superadd",
+  {
+    // --- 引数の宣言 ---
+    arg out, decay=0.0, sustain=1.0, pan;
+
+    // --- ローカル変数の宣言 ---
+    var sig, env, freqs, amps, phases;
+
+    // --- DynKlangのための静的なパラメータ配列生成 ---
+    freqs = Array.exprand(30, 50, 10000).sort;
+    amps = Array.exprand(30, 0.005, 0.4).sort.reverse;
+    phases = Array.rand(30, 0, 2pi);
+
+    // 周波数と振幅の配列にノイズ信号を乗算し、動的に変化させる
+    sig = DynKlang.ar(`[
+      freqs * LFNoise1.kr(0.02 ! 30).exprange(0.25, 4),
+      amps * LFNoise1.kr(1 ! 30).exprange(0.1, 1.5),
+      phases
+    ]);
+
+    // --- ステレオ化 ---
+    // sig = sig.dup(2);
+
+    // --- エンベロープの作成 (Env.asr) ---
+    env = EnvGen.ar(Env.pairs([[0,0],[0.5,1],[1,0]], -5), timeScale:sustain, levelScale: 1.0, doneAction:2);
+
+    // --- 出力 ---
+    //Out.ar(out, sig);
+ 		Out.ar(out, DirtPan.ar(sig, ~dirt.numChannels, pan, env));
+
+  }
+).add;
+);
