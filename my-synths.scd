@@ -240,7 +240,7 @@ SynthDef("superlaser", {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, fr
 );
 
 (
-SynthDef(\superost, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
+SynthDef("superost", {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
     gate = 1, lforate = 3, lfowidth= 0.1|
     var sound;
     var env = EnvGen.ar(Env.adsr(0.01,0.05,0.5,0.1), gate, doneAction:2, timeScale:sustain);
@@ -254,7 +254,7 @@ SynthDef(\superost, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
 );
 
 (
-SynthDef(\superbass, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
+SynthDef("superbass", {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
     gate=1, cutoff= 800, rq=0.2|
     var sound;
     var env = EnvGen.ar(Env.adsr(0.01,0.0,0.9,0.05),gate,doneAction:2, timeScale:sustain);
@@ -270,7 +270,7 @@ SynthDef(\superbass, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq
 
 
 (
-SynthDef(\supermoog, {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
+SynthDef("supermoog", {|out, speed=1, decay=0, sustain=0.1, pan, accelerate, freq,
     gate=1, attackTime= 0.2, fenvamount=1.0, cutoff= 2000, voice=2.0|
     var sound;
     //var env = EnvGen.ar(Env.adsr(0.001,0.3,0.9,0.2),gate,doneAction:2, timeScale:sustain);
@@ -551,4 +551,37 @@ SynthDef("superadd",
 
   }
 ).add;
+);
+
+(
+SynthDef("sho", {|out, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
+	voice=0, perc=0, percf=2, accelerate=0, speed=1|
+	var freqs, amps, sound, click, env, ampscale, attrel;
+	attrel = (sustain/2).clip(0,0.005);
+	freq = freq * DirtFreqScale.kr(speed, accelerate, sustain);
+	env = EnvGen.ar(Env.linen(attrel, sustain-(2*attrel), attrel), doneAction:2);
+	freqs = [0.5, 1.4988, 1, 2, 2.9976, 4, 5.0409, 5.9953, 8] * freq;
+	freqs = 2**(freqs < 63) * freqs; // fold up bottom register
+	freqs = freqs / (2**(freqs > 6000)); // fold down high harmonics
+	freqs = freqs / (2**(freqs > 6000)); // do it again for the really high notes
+	amps = SelectX.kr(voice, #[
+		[1, 4, 5, 4, 3, 1, 0, 0, 0], // 0: bass violin 16'
+		[0, 0, 8, 0, 4, 0, 0, 0, 0], // 1: tibia 8'
+		[0, 7, 8, 1, 2, 0, 0, 0, 0], // 2: bassoon 8'
+		[0, 0, 7, 8, 8, 8, 8, 7, 2], // 3: french trumpet 8'
+		[4, 0, 5, 5, 4, 5, 3, 3, 6], // 4: string ensemble
+		[8, 8, 5, 3, 2, 4, 5, 8, 8], // 5: Blues
+		[8, 8, 8, 0 ,0, 0, 0, 0, 3], // 6: Jazz 1
+		[8, 8, 8, 8, 8, 8, 8, 8, 8], // 7: Full Shout
+		[8, 0, 0, 0, 0, 0, 8, 8, 8], // 8: Bro' Jack
+		[0, 0, 8, 8, 0, 0, 0, 0, 0]  // 9: Jazz 2
+	]);
+	amps = amps - [0, 0, 0, 0, 0, 0, 0.5, 1, 1.5]; // damp brilliance a bit
+	amps = 2**(amps-8);
+	click = WhiteNoise.ar(1) * XLine.ar(1,1e-6, 0.1);
+	sound = 0.5 * Mix.ar( SinOsc.ar(freqs*(2*click+1), (2pi ! 9).rand, amps/amps.sum) );
+	sound = perc * 0.5 * SinOsc.ar(freq*percf, 2pi.rand) * XLine.ar(1,1e-6,2*decay+1) + sound;
+	sound = sound + BAllPass.ar(sound, 1000*LFTri.kr(vrate,0,vibrato/2,1));
+	Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add
 );
