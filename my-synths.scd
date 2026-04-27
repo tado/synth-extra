@@ -553,13 +553,16 @@ SynthDef("superadd",
 ).add;
 );
 
+
+
 (
-SynthDef("sho", {|out, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
+SynthDef(\sho, {|out, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
 	voice=0, perc=0, percf=2, accelerate=0, speed=1|
 	var freqs, amps, sound, click, env, ampscale, attrel;
 	attrel = (sustain/2).clip(0,0.005);
 	freq = freq * DirtFreqScale.kr(speed, accelerate, sustain);
-	env = EnvGen.ar(Env.linen(attrel, sustain-(2*attrel), attrel), doneAction:2);
+	//env = EnvGen.ar(Env.linen(attrel, sustain-(2*attrel), attrel), doneAction:2);
+	env = EnvGen.ar(Env.pairs([[0,0],[0.5,1],[1.0,0]]), timeScale:sustain, doneAction:2);
 	freqs = [0.5, 1.4988, 1, 2, 2.9976, 4, 5.0409, 5.9953, 8] * freq;
 	freqs = 2**(freqs < 63) * freqs; // fold up bottom register
 	freqs = freqs / (2**(freqs > 6000)); // fold down high harmonics
@@ -585,3 +588,89 @@ SynthDef("sho", {|out, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
 	Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add
 );
+
+(
+SynthDef(\sho2, {
+	var sustain = \sustain.kr(1);
+	var lfofreq = \lfofreq.kr(1);
+	var lfodepth = \lfodepth.kr(0);
+	var freq = \freq.kr(440);
+	var tremolo = 1 + (LFTri.kr(lfofreq) * lfodepth);
+	var out = \out.kr(0);
+	var pan = \pan.kr(0);
+	var voice = \voice.kr(0);
+	// overall envelope
+	//var env = EnvGen.ar(Env.linen(0.01, 0.98, 0.01, 1, -3), timeScale:sustain, doneAction:2);
+	var env = EnvGen.ar(Env.pairs([[0,0],[0.5,1],[1.0,0]]), timeScale:sustain, doneAction:2);
+	// operator output levels
+	var amps = Array.fill(6, { |i| (\amp++(i+1)).asSymbol.kr(1)});
+	// operator frequency ratios
+	var ratios = Array.fill(6, {|i| (\ratio++(i+1)).asSymbol.kr(1)});
+	// operator frequency detuners
+	var detunes = Array.fill(6, {|i| (\detune++(i+1)).asSymbol.kr(rand2(0.1))});
+	// feedback -- for presets only
+	var feedback = \feedback.kr(0.0);
+	// operator envelopes
+	var eglevels = Array.fill(6, {|i|
+		Array.fill(4, { |n| (\eglevel++(i+1)++(n+1)).asSymbol.kr(1) })
+	});
+	var egrates = Array.fill(6, {|i| [
+		// Supercollider envelopes use seconds for the durations of segments.
+		// So higher values mean transitions are slower.
+		// DX7s envelopes use rates, which is the inverse of time, 1/time.
+		// Higher values in DX7 mean transitions are faster.
+		max(0.1 / ((\egrate++(i+1)++1).asSymbol).ir(10), 0.001),
+		max(0.1 / ((\egrate++(i+1)++2).asSymbol).ir(0.3), 0.001),
+		max(0.1 / ((\egrate++(i+1)++3).asSymbol).ir(0.1), 0.001),
+		max(0.1 / ((\egrate++(i+1)++4).asSymbol).ir(0.1), 0.001),
+	]});
+	// modulation matrix
+	var mods = Array.fill2D(6, 6, { |r, c|
+		(\mod++(r+1)++(c+1)).asSymbol.kr(0) * if(r == c, feedback, 1)
+	});
+	var presets = SelectX.kr(voice, [
+		[ // user-defined
+			ratios,	detunes, amps, eglevels, egrates, mods,
+		],
+	] ++
+	// randomly generated presets
+	Array.fill(5, { [
+		// ratios
+		Array.fill(6, {
+			[0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 11.rand + 1, 13.rand + 1, 15.rand + 1].wchoose(
+				[1, 2, 8, 4, 3, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25].normalizeSum)
+		}),
+		// detunes
+		Array.fill(6, { rand2(7) }),
+		// amps
+		Array.fill(6, { 1.0.rand * 0.5.coin.asInteger }),
+		// EG levels
+		Array.fill2D(6, 4, {1.0.rand}),
+		// EG rates
+		Array.fill2D(6, 4, {1.0.rand}),
+		// mods
+		Array.fill2D(6, 6, {|r,c| 1.0.rand * 0.25.coin.asInteger * if(r == c, feedback, 1)}),
+	]})
+	);
+
+	var envs = Array.fill(6, { |i|
+		EnvGen.kr(
+			Env.new(
+				// EG levels
+				[0]++Array.fill(4, { |n| presets[3][i][n] }),
+				// EG rates
+				Array.fill(4, { |n| presets[4][i][n] })
+			),
+			timeScale:sustain,
+		);
+	});
+
+	var ctls = Array.fill(6, { |i|
+		[freq * tremolo * presets[0][i] + presets[1][i], 0, envs[i]]
+	});
+
+	var sound = FM7.ar(ctls, presets[5]) * amps;
+	sound = Mix.ar(sound) * (-15.dbamp);
+	Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add;
+)
