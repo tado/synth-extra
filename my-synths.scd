@@ -24,7 +24,20 @@ SynthDef("supersin",
 	{
 		arg out, decay=0.0, sustain=1.0, pan, accelerate, freq, lfo=1, detune=0.005;
 		var env = EnvGen.ar(Env.pairs([[0,0],[0.0,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
-		var sound = SinOsc.ar([freq, freq*(1 + detune)]);
+		var sound = LeakDC.ar(SinOsc.ar([freq, freq*(1 + detune)]));
+		Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+	}
+).add
+);
+
+// supersin と同じ純音サイン波に、superfadehammond と同じ山なりエンベロープを
+// 持たせたドローン用シンセ: sustain の前半でフェードイン、後半でフェードアウト
+(
+SynthDef("supersinfade",
+	{
+		arg out, decay=0.0, sustain=1.0, pan, accelerate, freq, lfo=1, detune=0.0;
+		var env = EnvGen.ar(Env.pairs([[0,0],[0.5,1],[1,0]], -1), timeScale:sustain, doneAction:2);
+		var sound = LeakDC.ar(SinOsc.ar([freq, freq*(1 + detune)]));
 		Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 	}
 ).add
@@ -389,12 +402,14 @@ SynthDef("superdown", {
     arg out = 0, sustain=1, gate = 1, amp = 1, freq, pitch1 = 0.3333333, voice = 800, clipAmount = 0.01, pan, decay=0;
     var carFreq = freq;
     var modFreq = freq * pitch1;
-    var modEnv = EnvGen.ar(Env.adsr(0.001, 0.2, 0.5, 0.0, peakLevel: voice), timeScale:sustain);
-    var pitchenv = EnvGen.kr(Env.new(levels: [1, 0], times: [2], curve: [-5]), timeScale:sustain, doneAction:2);
-    var mod = SinOsc.ar([modFreq, modFreq * 1.01]) * modEnv;
+    var modEnv = EnvGen.ar(Env.adsr(0.001, 1.0, 0.8, 0.0, peakLevel: voice), timeScale:sustain);
+    var pitchenv = EnvGen.kr(Env.new(levels: [1, 0], times: [2], curve: [-2]), timeScale:sustain, doneAction:2);
+    var mod = SinOsc.ar([modFreq, modFreq * 1.005]) * modEnv;
     var car = SinOsc.ar((carFreq + mod) * pitchenv);
     //var env = EnvGen.ar(Env.adsr(0.1, 0.3, 0.7, 0.2, peakLevel: amp), timeScale:sustain, doneAction: 2);
-    var env = EnvGen.ar(Env.pairs([[0,0],[0.1,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+    //var env = EnvGen.ar(Env.pairs([[0,0],[0.1,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3), timeScale:sustain, doneAction:2);
+	//var env = EnvGen.ar(Env.pairs([[0,0],[0.9,1],[0.98,1], [1,0]], 4), timeScale:sustain, doneAction:2);
+	var env = EnvGen.ar(Env.pairs([[0,0],[0.9999,1],[1,0]], -2), timeScale:sustain, doneAction:2);
     var clip = clipAmount * 500;
     OffsetOut.ar(out, DirtPan.ar(car, ~dirt.numChannels, pan, env));
     //Out.ar(out, (car * ampEnv * clip).clip(-0.7, 0.7) * 0.1);
@@ -672,5 +687,37 @@ SynthDef(\sho2, {
 	var sound = FM7.ar(ctls, presets[5]) * amps;
 	sound = Mix.ar(sound) * (-15.dbamp);
 	Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add;
+);
+
+(
+SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, detune=0.3, speed=1, ffreq=110, fadeout=0, rq=0.5 |
+	var pitchenv = EnvGen.kr(Env.new(levels: [1, 0], times: [2], curve: [-2]), timeScale:sustain, doneAction:2);
+	//var env = EnvGen.ar(Env.pairs([[0,0],[0.07,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -1), timeScale:sustain, doneAction:2);
+	// Only the tail is changed: the long linear rise from 0 to 1 across the
+	// whole note is the character of this synth and is left alone.  What was
+	// wrong is that it fell 1 -> 0 in the last 0.01% of sustain -- 37 ms on a
+	// 370 s note, an audible click.  The peak now sits at 1-rel so the fall
+	// takes fadeout seconds; timeScale still lands the note-off unchanged.
+	// fadeout 0 (the default) clips back to 0.0001 and reproduces the original
+	// envelope exactly, so ordinary Tidal notes are unchanged; the long opening
+	// drone asks for 0.5 s explicitly.
+	var rel = (fadeout / max(sustain, 0.001)).clip(0.0001, 0.5);
+	//var env = EnvGen.ar(Env.pairs([[0,0],[0.99999,1],[1,0]], 0, curve: 0), timeScale:sustain, doneAction:2);
+	var env = EnvGen.ar(Env.pairs([[0,0], [0.25,1],[1,1],[1.0001,0]]), timeScale:sustain, doneAction:2);
+	var basefreq = (freq * DirtFreqScale.kr(speed, accelerate, sustain) * pitchenv) + 0;
+	var sound = VarSaw.ar(basefreq, 0, Line.ar(0,0.5,sustain*20/slide));
+	var sound2 = VarSaw.ar([basefreq*(detune/100+1), basefreq*1.5*(detune/100+1)], 0, Line.ar(0,0.5,sustain*20/slide));
+	var sound3 = VarSaw.ar([basefreq*1.5*(-1*detune/100+1), basefreq*(-1*detune/100+1)], 0, Line.ar(0,0.5,sustain*20/slide));
+	sound = sound - DelayN.ar(sound2,0.2, Line.ar(0,1,5*sustain/slide)/basefreq)
+	  + DelayN.ar(sound3,0.2, Line.ar(0,1,20*sustain/slide)/basefreq);
+	sound = RLPF.ar(sound, ffreq, rq)
+	+ RLPF.ar(sound, ffreq*0.5, rq)
+	+ RLPF.ar(sound, ffreq*1.5, rq)
+	+ RLPF.ar(sound, ffreq*1.5*1.5, rq)
+	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5, rq);
+	// sound = LPF.ar(sound, ffreq);
+	// sound = FreeVerb.ar(sound, 0.33);
+	Out.ar(out, DirtPan.ar(sound / 5.0, ~dirt.numChannels, pan, env));
 }).add;
 )
