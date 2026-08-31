@@ -704,7 +704,7 @@ SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, 
 	// drone asks for 0.5 s explicitly.
 	var rel = (fadeout / max(sustain, 0.001)).clip(0.0001, 0.5);
 	//var env = EnvGen.ar(Env.pairs([[0,0],[0.99999,1],[1,0]], 0, curve: 0), timeScale:sustain, doneAction:2);
-	var env = EnvGen.ar(Env.pairs([[0,0], [0.5,1],[0.9999,1],[1,0]], curve: 4), timeScale:sustain, doneAction:2);
+	var env = EnvGen.ar(Env.pairs([[0,0], [0.5,1],[0.9999,1],[1,0]], curve: 0), timeScale:sustain, doneAction:2);
 	var basefreq = ((freq - add) * DirtFreqScale.kr(speed, accelerate, sustain) * pitchenv) + add;
 	var sound = VarSaw.ar(basefreq, 0, Line.ar(0,0.5,sustain*20/slide));
 	var sound2 = VarSaw.ar([basefreq*(detune/100+1), basefreq*1.5*(detune/100+1)], 0, Line.ar(0,0.5,sustain*20/slide));
