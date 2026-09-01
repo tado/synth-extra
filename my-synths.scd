@@ -718,7 +718,7 @@ SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, 
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5*1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5*1.5*1.5, rq);
-	sound = JPverb.ar(LeakDC.ar(sound), 15, size:1.0);
+	sound = JPverb.ar(LeakDC.ar(sound), 15, size:1);
 	//sound = Mix.arFill(32, { CombL.ar(sound, 0.1, LFNoise1.kr(Rand(0, 0.1), 0.01, 0.02), 15.0) }) * wet + (sound * (1-wet));
 
 	// sound = LPF.ar(sound, ffreq);
