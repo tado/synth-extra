@@ -692,7 +692,7 @@ SynthDef(\sho2, {
 
 (
 SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, detune=0.05, speed=1, ffreq=50, fadeout=0, rq=0.5, add=50 |
-	var pitchenv = EnvGen.kr(Env.new(levels: [1, 0], times: 1, curve: -6), timeScale:sustain, doneAction:2);
+	var pitchenv = EnvGen.kr(Env.new(levels: [1, 0], times: 1, curve: -4), timeScale:sustain, doneAction:2);
 	//var env = EnvGen.ar(Env.pairs([[0,0],[0.07,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -1), timeScale:sustain, doneAction:2);
 	// Only the tail is changed: the long linear rise from 0 to 1 across the
 	// whole note is the character of this synth and is left alone.  What was
@@ -704,7 +704,7 @@ SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, 
 	// drone asks for 0.5 s explicitly.
 	var rel = (fadeout / max(sustain, 0.001)).clip(0.0001, 0.5);
 	//var env = EnvGen.ar(Env.pairs([[0,0],[0.99999,1],[1,0]], 0, curve: 0), timeScale:sustain, doneAction:2);
-	var env = EnvGen.ar(Env.pairs([[0,0], [0.5,1],[0.9999,1],[1,0]], curve: 0), timeScale:sustain, doneAction:2);
+	var env = EnvGen.ar(Env.pairs([[0,0], [0.5,1],[0.9999,1],[1,0]], curve: 0), timeScale:sustain, doneAction:4);
 	var basefreq = ((freq - add) * DirtFreqScale.kr(speed, accelerate, sustain) * pitchenv) + add;
 	var sound = VarSaw.ar(basefreq, 0, Line.ar(0,0.5,sustain*20/slide));
 	var sound2 = VarSaw.ar([basefreq*(detune/100+1), basefreq*1.5*(detune/100+1)], 0, Line.ar(0,0.5,sustain*20/slide));
@@ -718,7 +718,7 @@ SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, 
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5*1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5*1.5*1.5, rq);
-	sound = JPverb.ar(LeakDC.ar(sound), 5.0, size:2.0);
+	sound = JPverb.ar(LeakDC.ar(sound), 15, size:1.0);
 	//sound = Mix.arFill(32, { CombL.ar(sound, 0.1, LFNoise1.kr(Rand(0, 0.1), 0.01, 0.02), 15.0) }) * wet + (sound * (1-wet));
 
 	// sound = LPF.ar(sound, ffreq);
