@@ -704,7 +704,7 @@ SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, 
 	// drone asks for 0.5 s explicitly.
 	var rel = (fadeout / max(sustain, 0.001)).clip(0.0001, 0.5);
 	//var env = EnvGen.ar(Env.pairs([[0,0],[0.99999,1],[1,0]], 0, curve: 0), timeScale:sustain, doneAction:2);
-	var env = EnvGen.ar(Env.pairs([[0,0], [0.5,1],[0.9999,1],[1,0]], curve: 0), timeScale:sustain, doneAction:4);
+	var env = EnvGen.ar(Env.pairs([[0,0], [0.5,1],[0.999,1],[1,0]], curve: 2), timeScale:sustain, doneAction:4);
 	var basefreq = ((freq - add) * DirtFreqScale.kr(speed, accelerate, sustain) * pitchenv) + add;
 	var sound = VarSaw.ar(basefreq, 0, Line.ar(0,0.5,sustain*20/slide));
 	var sound2 = VarSaw.ar([basefreq*(detune/100+1), basefreq*1.5*(detune/100+1)], 0, Line.ar(0,0.5,sustain*20/slide));
@@ -712,13 +712,13 @@ SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, 
 	sound = sound - DelayN.ar(sound2,0.2, Line.ar(0,1,5*sustain/slide)/basefreq)
 	+ DelayN.ar(sound3,0.2, Line.ar(0,1,20*sustain/slide)/basefreq);
 	sound = RLPF.ar(sound, ffreq, rq)
-	+ RLPF.ar(sound, ffreq*0.5, rq)
+	+ RLPF.ar(sound, ffreq/1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5*1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5*1.5, rq)
 	+ RLPF.ar(sound, ffreq*1.5*1.5*1.5*1.5*1.5, rq);
-	sound = JPverb.ar(LeakDC.ar(sound), 15, size:1);
+	sound = JPverb.ar(LeakDC.ar(sound), 10, size:1);
 	//sound = Mix.arFill(32, { CombL.ar(sound, 0.1, LFNoise1.kr(Rand(0, 0.1), 0.01, 0.02), 15.0) }) * wet + (sound * (1-wet));
 
 	// sound = LPF.ar(sound, ffreq);
