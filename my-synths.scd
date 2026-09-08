@@ -725,4 +725,34 @@ SynthDef("superlow", {|out, sustain=1, pan, accelerate, freq, decay=0, slide=1, 
 	// sound = FreeVerb.ar(sound, 0.33);
 	Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add;
-)
+);
+
+(
+SynthDef(\supermf, {|out, sustain=1, decay=0, pan, accelerate=0, speed=1, freq=269.2918,
+	ring=0, coef=0.5, pick=0.3162, mcut=4000, mres=0, spread=1|
+	var intervals, env, ringtime, trig, basefreq, freqs, exc, sound;
+
+	// 元コードの音程構造。ここは固定 (ミクソリディアン 7 音)
+	intervals = [0, 2, 4, 5, 7, 9, 10];
+
+	env = EnvGen.ar(
+		Env.pairs([[0,0],[0,1],[0.2,1-decay],[0.95,1-decay],[1,0]], -3),
+		timeScale:sustain, doneAction:2);
+
+	// 弦の減衰時間。ring=0 (既定) なら sustain に追従するので legato が効く。
+	// ring>0 ならその秒数に固定。元コードの 0.9 を再現したいときはこちら。
+	ringtime = Select.kr(ring > 0, [sustain*4, ring]);
+
+	trig = Impulse.ar(0);
+	basefreq = (freq * DirtFreqScale.kr(speed, accelerate, sustain)).clip(8, 4000);
+	freqs = basefreq * (intervals * spread).midiratio;
+	exc = Hasher.ar(Sweep.ar(trig)) * pick;
+	sound = Pluck.ar(exc, trig, 0.2, freqs.reciprocal, ringtime, coef.clip(-0.99, 0.99));
+
+	sound = LeakDC.ar(sound).sum;
+	sound = MoogFF.ar(sound, mcut.clip(20, 18000), mres.clip(0, 3.9));
+
+	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add
+);
+
